@@ -16,18 +16,18 @@ const browserstack_domain = "https://api-cloud.browserstack.com"
 const app_upload_endpoint = "/app-automate/upload"
 const test_suite_upload_endpoint = "/app-automate/espresso/v2/test-suite"
 const app_automate_build_endpoint = "/app-automate/espresso/v2/build"
-
-// func failf(format string, args ...interface{}) {
-// 	log.Fatalf(format, args...)
-// 	os.Exit(1)
-// }
+const app_automate_build_status_endpoint = "/app-automate/espresso/v2/builds/"
 
 func main() {
 	log.Printf("Hello from go")
 
-	// todo: get from env
-	username := "rishabhbhatia_OZ2u1M" // get from env
-	access_key := "e76ypTPaVtQnFyqhAWBn"
+	// todo: get from env of bitrise
+	username := os.Getenv("BROWSERSTACK_USERNAME")
+	access_key := os.Getenv("BROWSERSTACK_ACCESS_KEY")
+
+	if username == "" || access_key == "" {
+		failf("Failed to upload app on BrowserStack, error : invalid credentials")
+	}
 
 	// upload the app
 	upload_app := upload("/Users/rishabh/Downloads/Calculator.apk", app_upload_endpoint, username, access_key)
@@ -57,15 +57,20 @@ func main() {
 	test_suite_url := test_suite_parsed_response["test_suite_url"].(string)
 	log.Println("test_suite_url -> ", test_suite_url)
 
-	build(app_url, test_suite_url, username, access_key)
+	build_response := build(app_url, test_suite_url, username, access_key)
+	build_parsed_response := make(map[string]interface{})
+
+	json.Unmarshal([]byte(build_response), &build_parsed_response)
+
+	build_id := build_parsed_response["build_id"].(string)
+
+	checkBuildStatus(build_id, username, access_key)
 }
 
 func upload(app_path string, endpoint string, username string, access_key string) string {
 	if app_path == "" {
 		failf("Failed to upload app on BrowserStack, error : app_path not found")
 	}
-
-	method := "POST"
 
 	payload := &bytes.Buffer{}
 	multipart_writer := multipart.NewWriter(payload)
@@ -92,7 +97,7 @@ func upload(app_path string, endpoint string, username string, access_key string
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest(method, browserstack_domain+endpoint, payload)
+	req, err := http.NewRequest("POST", browserstack_domain+endpoint, payload)
 
 	if err != nil {
 		// TODO: confirm this error
@@ -123,8 +128,6 @@ func build(app_url string, test_suite_url string, username string, access_key st
 
 	log.Printf("Starting build with app_id %s and test_suite_id", app_url, test_suite_url)
 
-	method := "POST"
-
 	devices := [...]string{"Samsung Galaxy Note 20-10.0"}
 
 	payload_values := map[string]interface{}{
@@ -136,7 +139,7 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	payload, err := json.Marshal(payload_values)
 
 	client := &http.Client{}
-	req, err := http.NewRequest(method, browserstack_domain+app_automate_build_endpoint, bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", browserstack_domain+app_automate_build_endpoint, bytes.NewBuffer(payload))
 
 	if err != nil {
 		// TODO: confirm this error
@@ -150,6 +153,38 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	if err != nil {
 		failf("Unable to read response: %s", err)
 	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		failf("Unable to read api response: %s", err)
+	}
+
+	return string(body)
+}
+
+func checkBuildStatus(build_id string, username string, access_key string) string {
+
+	log.Printf("Checking build status for build_id %s", build_id)
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", browserstack_domain+app_automate_build_status_endpoint+build_id, nil)
+
+	log.Print(browserstack_domain + app_automate_build_status_endpoint + build_id)
+	if err != nil {
+		// TODO: confirm this error
+		failf("Failed to check build status: %s", err)
+	}
+
+	req.SetBasicAuth(username, access_key)
+
+	req.Header.Set("Content-Type", "application/json")
+	res, err := client.Do(req)
+
+	if err != nil {
+		failf("Unable to read response: %s", err)
+	}
+
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)

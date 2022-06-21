@@ -32,7 +32,7 @@ func payload_validate_key(key string, value string) bool {
 
 // func payload_validate()
 
-func main() {
+func utils() {
 	jsonFile, err := os.Open("validation.json")
 
 	if err != nil {
