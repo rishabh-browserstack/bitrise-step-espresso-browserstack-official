@@ -17,15 +17,10 @@ const app_upload_endpoint = "/app-automate/upload"
 const test_suite_upload_endpoint = "/app-automate/espresso/v2/test-suite"
 const app_automate_build_endpoint = "/app-automate/espresso/v2/build"
 
-// func upload_app(app_path string) {
-// 	if app_path == "" {
-// 		log.Fatalf("Failed to upload app on BrowserStack, error : app_path not found")
-// 	}
-
-func failf(format string, args ...interface{}) {
-	log.Fatalf(format, args...)
-	os.Exit(1)
-}
+// func failf(format string, args ...interface{}) {
+// 	log.Fatalf(format, args...)
+// 	os.Exit(1)
+// }
 
 func main() {
 	log.Printf("Hello from go")
@@ -33,13 +28,13 @@ func main() {
 	// todo: get from env
 	username := "rishabhbhatia_OZ2u1M" // get from env
 	access_key := "e76ypTPaVtQnFyqhAWBn"
-	// req.SetBasicAuth("rishabhbhatia_OZ2u1M", "e76ypTPaVtQnFyqhAWBn")
 
 	// upload the app
 	upload_app := upload("/Users/rishabh/Downloads/Calculator.apk", app_upload_endpoint, username, access_key)
 
 	app_upload_parsed_response := make(map[string]interface{})
-	// json parse & makes it accessable to read in code.
+
+	// json decode
 	err := json.Unmarshal([]byte(upload_app), &app_upload_parsed_response)
 
 	if err != nil {
