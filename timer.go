@@ -45,9 +45,26 @@ func setInterval(someFunc func(), milliseconds int, async bool) chan bool {
 
 // func main() {
 
-// 	// A counter for the number of times we print
+// A counter for the number of times we print
 
-// 	// We call set interval to print Hello World forever
-// 	// every 1 second
+// We call set interval to print Hello World forever
+// every 1 second
+// clear :=setInterval(func() {
+// 	fmt.Println("Hello World")
+// 	printed++
+// }, 1000, false)
 
+// If we wanted to we had a long running task (i.e. network call)
+// we could pass in true as the last argument to run the function
+// as a goroutine
+
+// Some artificial work here to wait till we've printed
+// 5 times
+// for {
+// 	if printed == 1 {
+// Stop the ticket, ending the interval go routine
+// 		clear <- true
+// return
+// 	}
+// }
 // }

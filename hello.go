@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const browserstack_domain = "https://api-cloud.browserstack.com"
@@ -17,6 +18,13 @@ const app_upload_endpoint = "/app-automate/upload"
 const test_suite_upload_endpoint = "/app-automate/espresso/v2/test-suite"
 const app_automate_build_endpoint = "/app-automate/espresso/v2/build"
 const app_automate_build_status_endpoint = "/app-automate/espresso/v2/builds/"
+
+func doEvery(d time.Duration, f func(capacities ...string)) {
+	for {
+		time.Sleep(d)
+		f()
+	}
+}
 
 func main() {
 	log.Printf("Hello from go")
@@ -64,7 +72,12 @@ func main() {
 
 	build_id := build_parsed_response["build_id"].(string)
 
-	checkBuildStatus(build_id, username, access_key)
+	build_status := checkBuildStatus(build_id, username, access_key)
+
+	log.Print(build_status)
+
+	// check_build_status := setInterval(build_status(build_id, username, access_key),)
+
 }
 
 func upload(app_path string, endpoint string, username string, access_key string) string {
@@ -165,33 +178,53 @@ func build(app_url string, test_suite_url string, username string, access_key st
 
 func checkBuildStatus(build_id string, username string, access_key string) string {
 
-	log.Printf("Checking build status for build_id %s", build_id)
+	build_status := ""
+	log.Print("here")
+	clear := setInterval(func() {
+		log.Print("here1")
+		log.Printf("Checking build status for build_id %s", build_id)
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", browserstack_domain+app_automate_build_status_endpoint+build_id, nil)
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", browserstack_domain+app_automate_build_status_endpoint+build_id, nil)
 
-	log.Print(browserstack_domain + app_automate_build_status_endpoint + build_id)
-	if err != nil {
-		// TODO: confirm this error
-		failf("Failed to check build status: %s", err)
+		log.Print(browserstack_domain + app_automate_build_status_endpoint + build_id)
+		if err != nil {
+			// TODO: confirm this error
+			failf("Failed to check build status: %s", err)
+		}
+
+		req.SetBasicAuth(username, access_key)
+
+		req.Header.Set("Content-Type", "application/json")
+		res, err := client.Do(req)
+
+		if err != nil {
+			failf("Unable to read response: %s", err)
+		}
+
+		defer res.Body.Close()
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			failf("Unable to read api response: %s", err)
+		}
+		// return string(body)
+
+		build_parsed_response := make(map[string]interface{})
+
+		json.Unmarshal([]byte(body), &build_parsed_response)
+
+		build_status = build_parsed_response["status"].(string)
+		log.Print(build_status)
+	}, 30000, false)
+
+	log.Print(build_status)
+
+	for {
+		if build_status != "running" && build_status != "" {
+			// Stop the ticket, ending the interval go routine
+			clear <- true
+			return build_status
+		}
 	}
-
-	req.SetBasicAuth(username, access_key)
-
-	req.Header.Set("Content-Type", "application/json")
-	res, err := client.Do(req)
-
-	if err != nil {
-		failf("Unable to read response: %s", err)
-	}
-
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		failf("Unable to read api response: %s", err)
-	}
-
-	log.Print(string(body))
-	return string(body)
 }
