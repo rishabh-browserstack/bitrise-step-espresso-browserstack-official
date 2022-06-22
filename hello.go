@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 const browserstack_domain = "https://api-cloud.browserstack.com"
@@ -19,25 +18,18 @@ const test_suite_upload_endpoint = "/app-automate/espresso/v2/test-suite"
 const app_automate_build_endpoint = "/app-automate/espresso/v2/build"
 const app_automate_build_status_endpoint = "/app-automate/espresso/v2/builds/"
 
-func doEvery(d time.Duration, f func(capacities ...string)) {
-	for {
-		time.Sleep(d)
-		f()
-	}
-}
-
 func main() {
 	log.Printf("Hello from go")
 
-	// todo: get from env of bitrise
-	username := os.Getenv("BROWSERSTACK_USERNAME")
-	access_key := os.Getenv("BROWSERSTACK_ACCESS_KEY")
+	username := os.Getenv("browserstack_username")
+	access_key := os.Getenv("browserstack_accesskey")
 
 	if username == "" || access_key == "" {
 		failf("Failed to upload app on BrowserStack, error : invalid credentials")
 	}
 
 	// upload the app
+	// todo: get from env of bitrise
 	upload_app := upload("/Users/rishabh/Downloads/Calculator.apk", app_upload_endpoint, username, access_key)
 
 	app_upload_parsed_response := make(map[string]interface{})
@@ -53,6 +45,7 @@ func main() {
 	log.Println("app_url ->", app_url)
 
 	// upload test_suite
+	// todo: get from env of bitrise
 	upload_test_suite := upload("/Users/rishabh/Downloads/CalculatorTest.apk", test_suite_upload_endpoint, username, access_key)
 
 	test_suite_parsed_response := make(map[string]interface{})
