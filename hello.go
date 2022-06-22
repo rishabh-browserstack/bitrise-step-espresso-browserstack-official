@@ -159,7 +159,7 @@ func build(app_url string, test_suite_url string, username string, access_key st
 		failf("Failed to upload file: %s", err)
 	}
 	// req.SetBasicAuth("rishabhbhatia_OZ2u1M", "e76ypTPaVtQnFyqhAWBn")
-	req.SetBasicAuth(username, access_key)
+	req.SetBasicAuth(username+"-bitrise", access_key)
 
 	req.Header.Set("Content-Type", "application/json")
 	res, err := client.Do(req)
@@ -179,9 +179,9 @@ func build(app_url string, test_suite_url string, username string, access_key st
 func checkBuildStatus(build_id string, username string, access_key string) string {
 
 	build_status := ""
-	log.Print("here")
+
 	clear := setInterval(func() {
-		log.Print("here1")
+		log.Print("Inside interval function")
 		log.Printf("Checking build status for build_id %s", build_id)
 
 		client := &http.Client{}
