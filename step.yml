@@ -109,7 +109,7 @@ inputs:
       summary: "List of devices to run the tests: one or more devices comma separated"
       is_expand: true
       is_required: true
-      description: "Name of one or more device-OS combination separated by comma. For example, `Samsung Galaxy S9 Plus-9.0`, `Google Pixel 3a-9.0`"
+      description: "Name of one or more device-OS combination separated by comma. For example, `\"Samsung Galaxy S9 Plus-9.0\"`, `\"Google Pixel 3a-9.0\"`"
       category: "Devices"
       
   # Debug logs inputs
