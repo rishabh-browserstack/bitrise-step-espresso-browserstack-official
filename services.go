@@ -44,10 +44,13 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	req.SetBasicAuth(username+"-bitrise", access_key)
 
 	req.Header.Set("Content-Type", "application/json")
+
 	res, err := client.Do(req)
+
 	if err != nil {
 		failf("Unable to read response: %s", err)
 	}
+
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
@@ -143,10 +146,10 @@ func checkBuildStatus(build_id string, username string, access_key string) strin
 		defer res.Body.Close()
 
 		body, err := ioutil.ReadAll(res.Body)
+
 		if err != nil {
 			failf("Unable to read api response: %s", err)
 		}
-		// return string(body)
 
 		build_parsed_response := make(map[string]interface{})
 
@@ -155,8 +158,6 @@ func checkBuildStatus(build_id string, username string, access_key string) strin
 		build_status = build_parsed_response["status"].(string)
 		log.Print(build_status)
 	}, interval_in_milliseconds, false)
-
-	log.Print(build_status)
 
 	for {
 		if build_status != "running" && build_status != "" {

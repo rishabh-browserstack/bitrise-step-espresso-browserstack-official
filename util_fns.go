@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"log"
 	"os"
 	"strconv"
@@ -130,34 +131,14 @@ func setInterval(someFunc func(), milliseconds int, async bool) chan bool {
 
 }
 
-// var payload_validations map[string]interface{}
+func jsonParse(base64String string) map[string]interface{} {
+	parsed_json := make(map[string]interface{})
 
-// // WIP
-// func payload_validate_key(key string, value string) bool {
-// 	fmt.Println(payload_validations[key])
-// 	if validation, key_exists := payload_validations[key]; key_exists {
-// 		// log.Print(validation, key_exists)
+	err := json.Unmarshal([]byte(base64String), &parsed_json)
 
-// 		validation_regex := regexp.MustCompile(validation.(string))
-// 		return validation_regex.MatchString(value)
-// 	}
+	if err != nil {
+		failf("Unable to parse app_upload API response: %s", err)
+	}
 
-// 	failf("Failed to parse the input parameter: %s", key)
-// 	return false
-// }
-
-// // func payload_validate()
-
-// func utils() {
-// 	jsonFile, err := os.Open("validation.json")
-
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	defer jsonFile.Close()
-
-// 	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-// 	json.Unmarshal([]byte(byteValue), &payload_validations)
-// }
+	return parsed_json
+}
