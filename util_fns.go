@@ -6,9 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
-
-// type Queue []Class
 
 type BrowserStackPayload struct {
 	App                    string      `json:"app"`
@@ -79,18 +78,56 @@ func createBuildPayload() BrowserStackPayload {
 
 	}
 
-	log.Print(payload.Devices, " here")
-
 	if test_filters != "" {
 		payload.Class = []string{test_filters}
 		payload.Package = []string{test_filters}
 	}
+
 	return payload
 }
 
 func failf(format string, args ...interface{}) {
 	log.Fatalf(format, args...)
 	os.Exit(1)
+}
+
+func setInterval(someFunc func(), milliseconds int, async bool) chan bool {
+
+	// How often to fire the passed in function
+	// in milliseconds
+	interval := time.Duration(milliseconds) * time.Millisecond
+
+	// Setup the ticket and the channel to signal
+	// the ending of the interval
+	ticker := time.NewTicker(interval)
+	clear := make(chan bool)
+
+	// Put the selection in a go routine
+	// so that the for loop is none blocking
+	go func() {
+		for {
+
+			select {
+			case <-ticker.C:
+				if async {
+					// This won't block
+					go someFunc()
+				} else {
+					// This will block
+					someFunc()
+				}
+			case <-clear:
+				ticker.Stop()
+				// return
+			}
+
+		}
+	}()
+
+	// We return the channel so we can pass in
+	// a value to it to clear the interval
+	return clear
+
 }
 
 // var payload_validations map[string]interface{}
