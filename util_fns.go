@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // type Queue []Class
@@ -43,8 +45,10 @@ func createBuildPayload() BrowserStackPayload {
 	use_mock_server, _ := strconv.ParseBool(os.Getenv("use_mock_server"))
 	test_filters := os.Getenv("filter_test")
 
+	// log.Print(strings.Split(os.Getenv("devices_list"), ","))
+
 	payload := BrowserStackPayload{
-		Devices:                []string{os.Getenv("devices_list")},
+		// Devices:                []string{os.Getenv("devices_list")},
 		InstrumentationLogs:    instrumentation_logs,
 		NetworkLogs:            network_logs,
 		DeviceLogs:             device_logs,
@@ -61,6 +65,21 @@ func createBuildPayload() BrowserStackPayload {
 		// Annotation:             []string{os.Getenv("filter_test")},
 		// Size:                   []string{os.Getenv("filter_test")},
 	}
+
+	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("devices_list")))
+	for scanner.Scan() {
+		device := scanner.Text()
+		device = strings.TrimSpace(device)
+
+		if device == "" {
+			continue
+		}
+
+		payload.Devices = append(payload.Devices, device)
+
+	}
+
+	log.Print(payload.Devices, " here")
 
 	if test_filters != "" {
 		payload.Class = []string{test_filters}

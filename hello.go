@@ -39,10 +39,9 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	payload_values.App = app_url
 	payload_values.TestSuite = test_suite_url
 
-	// log.Print(os.Getenv("devices_list"))
 	log.Print(payload_values)
 
-	payload, err := json.MarshalIndent(payload_values, "", "  ")
+	payload, err := json.Marshal(payload_values)
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", browserstack_domain+app_automate_build_endpoint, bytes.NewBuffer(payload))
