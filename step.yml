@@ -101,7 +101,7 @@ inputs:
       category: "App & Test Suite"
       
   # Devices
-  - devices: 
+  - devices_list: 
     opts:
       title: "Devices"
       # value_options: 

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 const browserstack_domain = "https://api-cloud.browserstack.com"
@@ -18,8 +19,62 @@ const test_suite_upload_endpoint = "/app-automate/espresso/v2/test-suite"
 const app_automate_build_endpoint = "/app-automate/espresso/v2/build"
 const app_automate_build_status_endpoint = "/app-automate/espresso/v2/builds/"
 
+func build(app_url string, test_suite_url string, username string, access_key string) string {
+	if app_url == "" || test_suite_url == "" {
+		failf("Failed to upload app on BrowserStack, error : app_path not found")
+	}
+
+	log.Printf("Starting build with app_id %s and test_suite_id", app_url, test_suite_url)
+
+	// devices := [...]string{"Samsung Galaxy Note 20-10.0"}
+
+	// payload_values := map[string]interface{}{
+	// 	"app":       app_url,
+	// 	"testSuite": test_suite_url,
+	// 	"devices":   []string{os.Getenv("devices_list")},
+	// 	"deviceLogs":
+	// }
+
+	payload_values := createBuildPayload()
+	payload_values.App = app_url
+	payload_values.TestSuite = test_suite_url
+
+	// log.Print(os.Getenv("devices_list"))
+	log.Print(payload_values)
+
+	payload, err := json.MarshalIndent(payload_values, "", "  ")
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", browserstack_domain+app_automate_build_endpoint, bytes.NewBuffer(payload))
+
+	if err != nil {
+		// TODO: confirm this error
+		failf("Failed to upload file: %s", err)
+	}
+
+	req.SetBasicAuth(username+"-bitrise", access_key)
+
+	req.Header.Set("Content-Type", "application/json")
+	res, err := client.Do(req)
+	if err != nil {
+		failf("Unable to read response: %s", err)
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		failf("Unable to read api response: %s", err)
+	}
+
+	log.Print(string(body))
+
+	return string(body)
+}
+
 func main() {
 	log.Printf("Hello from go")
+
+	// log.Print(os.Environ())
 
 	username := os.Getenv("browserstack_username")
 	access_key := os.Getenv("browserstack_accesskey")
@@ -59,17 +114,22 @@ func main() {
 	log.Println("test_suite_url -> ", test_suite_url)
 
 	build_response := build(app_url, test_suite_url, username, access_key)
-	build_parsed_response := make(map[string]interface{})
 
-	json.Unmarshal([]byte(build_response), &build_parsed_response)
+	check_build_status, _ := strconv.ParseBool(os.Getenv("check_build_status"))
 
-	build_id := build_parsed_response["build_id"].(string)
+	if check_build_status {
+		build_parsed_response := make(map[string]interface{})
 
-	build_status := checkBuildStatus(build_id, username, access_key)
+		json.Unmarshal([]byte(build_response), &build_parsed_response)
 
-	log.Print(build_status)
+		build_id := build_parsed_response["build_id"].(string)
 
-	// check_build_status := setInterval(build_status(build_id, username, access_key),)
+		build_status := checkBuildStatus(build_id, username, access_key)
+
+		log.Print(build_status)
+	} else {
+		return
+	}
 
 }
 
@@ -113,48 +173,6 @@ func upload(app_path string, endpoint string, username string, access_key string
 	req.SetBasicAuth(username, access_key)
 
 	req.Header.Set("Content-Type", multipart_writer.FormDataContentType())
-	res, err := client.Do(req)
-	if err != nil {
-		failf("Unable to read response: %s", err)
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		failf("Unable to read api response: %s", err)
-	}
-
-	return string(body)
-}
-
-func build(app_url string, test_suite_url string, username string, access_key string) string {
-	if app_url == "" || test_suite_url == "" {
-		failf("Failed to upload app on BrowserStack, error : app_path not found")
-	}
-
-	log.Printf("Starting build with app_id %s and test_suite_id", app_url, test_suite_url)
-
-	devices := [...]string{"Samsung Galaxy Note 20-10.0"}
-
-	payload_values := map[string]interface{}{
-		"app":       app_url,
-		"testSuite": test_suite_url,
-		"devices":   devices,
-	}
-
-	payload, err := json.Marshal(payload_values)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", browserstack_domain+app_automate_build_endpoint, bytes.NewBuffer(payload))
-
-	if err != nil {
-		// TODO: confirm this error
-		failf("Failed to upload file: %s", err)
-	}
-	// req.SetBasicAuth("rishabhbhatia_OZ2u1M", "e76ypTPaVtQnFyqhAWBn")
-	req.SetBasicAuth(username+"-bitrise", access_key)
-
-	req.Header.Set("Content-Type", "application/json")
 	res, err := client.Do(req)
 	if err != nil {
 		failf("Unable to read response: %s", err)
