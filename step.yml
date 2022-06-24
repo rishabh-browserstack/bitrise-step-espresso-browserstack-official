@@ -140,7 +140,7 @@ inputs:
         - true
         - false
       category: "Debug logs"
-  - screenshots: false
+  - debug_screenshots: false
     opts:
       title: "Capture Screenshots"
       summary: "Capture the screenshots in your tests"

@@ -35,25 +35,53 @@ func main() {
 	test_suite := os.Getenv("espresso_test_suite")
 
 	if username == "" || access_key == "" {
-		failf("Failed to upload app on BrowserStack, error : invalid credentials")
+		failf(UPLOAD_APP_ERROR, "invalid credentials")
 	}
 
-	upload_app := upload(android_app, app_upload_endpoint, username, access_key)
+	upload_app, err := upload(android_app, APP_UPLOAD_ENDPOINT, username, access_key)
 
-	app_url := jsonParse(upload_app)["app_url"].(string)
+	if err != nil {
+		failf(err.Error())
+	}
 
-	upload_test_suite := upload(test_suite, test_suite_upload_endpoint, username, access_key)
+	upload_app_parsed_response := jsonParse(upload_app)
+
+	if upload_app_parsed_response["app_url"] == "" {
+		failf(err.Error())
+	}
+
+	app_url := upload_app_parsed_response["app_url"].(string)
+
+	upload_test_suite, err := upload(test_suite, TEST_SUITE_UPLOAD_ENDPOINT, username, access_key)
+
+	if err != nil {
+		failf(err.Error())
+	}
 
 	test_suite_url := jsonParse(upload_test_suite)["test_suite_url"].(string)
 
-	build_response := build(app_url, test_suite_url, username, access_key)
+	build_response, err := build(app_url, test_suite_url, username, access_key)
+
+	if err != nil {
+		failf(err.Error())
+	}
 
 	check_build_status, _ := strconv.ParseBool(os.Getenv("check_build_status"))
 
 	if check_build_status {
-		build_id := jsonParse(build_response)["build_id"].(string)
+		build_parsed_response := jsonParse(build_response)
 
-		build_status := checkBuildStatus(build_id, username, access_key)
+		if build_parsed_response["message"] != "Success" {
+			failf(BUILD_FAILED_ERROR, build_parsed_response["message"])
+		}
+
+		build_id := build_parsed_response["build_id"].(string)
+
+		build_status, err := checkBuildStatus(build_id, username, access_key)
+
+		if err != nil {
+			failf(err.Error())
+		}
 
 		log.Printf("build_status %s", build_status)
 	}

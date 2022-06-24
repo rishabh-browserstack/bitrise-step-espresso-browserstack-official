@@ -17,7 +17,7 @@ type BrowserStackPayload struct {
 	InstrumentationLogs    bool        `json:"instrumentationLogs"`
 	NetworkLogs            bool        `json:"networkLogs"`
 	DeviceLogs             bool        `json:"deviceLogs"`
-	Screenshots            bool        `json:"screenshots"`
+	DebugScreenshots       bool        `json:"debugscreenshots,omitempty"`
 	VideoRecording         bool        `json:"video"`
 	Project                string      `json:"project,omitempty"`
 	ProjectNotifyURL       string      `json:"projectNotifyURL,omitempty"`
@@ -37,7 +37,7 @@ func createBuildPayload() BrowserStackPayload {
 	instrumentation_logs, _ := strconv.ParseBool(os.Getenv("instrumentation_logs"))
 	network_logs, _ := strconv.ParseBool(os.Getenv("network_logs"))
 	device_logs, _ := strconv.ParseBool(os.Getenv("device_logs"))
-	screenshots, _ := strconv.ParseBool(os.Getenv("screenshots"))
+	debug_screenshots, _ := strconv.ParseBool(os.Getenv("debug_screenshots"))
 	video_recording, _ := strconv.ParseBool(os.Getenv("video_recording"))
 	use_local, _ := strconv.ParseBool(os.Getenv("use_local"))
 	clear_app_data, _ := strconv.ParseBool(os.Getenv("clear_app_data"))
@@ -52,7 +52,7 @@ func createBuildPayload() BrowserStackPayload {
 		InstrumentationLogs:    instrumentation_logs,
 		NetworkLogs:            network_logs,
 		DeviceLogs:             device_logs,
-		Screenshots:            screenshots,
+		DebugScreenshots:       debug_screenshots,
 		VideoRecording:         video_recording,
 		SingleRunnerInvocation: use_single_runner_invocation,
 		Project:                os.Getenv("project"),
