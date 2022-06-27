@@ -199,8 +199,20 @@ inputs:
   - filter_test:
     opts:
       title: "Filter tests"
-      summary: "Key-value pairs of filters to run tests: `class`, `package`, `annotation`, `size`."
-      description: "Provide key-value pairs of filters to run tests: `class`, `package`, `annotation`, `size`.For example, `\"class\": [\"com.foo.AddToCartClass\", \"com.foo.CheckoutClass\"]` [Learn more.](https://www.browserstack.com/docs/app-automate/espresso/select-test-cases)"
+      summary: |-
+        "Key-value pairs of filters to run tests from supported test filtering strategies: class, package, annotation, size.
+        Examples: 
+        For class filtering strategy:
+        class com.android.foo.ClassA, class com.android.foo.ClassB,class com.android.foo.ClassC
+        For package filtering strategy:
+        package com.android.foo
+        For annotation filtering strategy:
+        size small,size medium,size large"
+      description: |-
+        Provide key-value pairs of filters to run tests: class, package, annotation, size
+        For example, class com.foo.AddToCartClass,class com.foo.CheckoutClass
+        package com.foo
+        Learn more.
       category: "Test Configuration"
   - use_single_runner_invocation: false
     opts:

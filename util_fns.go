@@ -3,12 +3,31 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
+
+type TestMapping struct {
+	Name     string   `json:"name,omitempty"`
+	Strategy string   `json:"strategy,omitempty"`
+	Values   []string `json:"values,omitempty"`
+}
+
+type TestSharding struct {
+	NumberOfShards      int           `json:"numberOfShards,omitempty"`
+	Mapping             []TestMapping `json:"mapping,omitempty"`
+	AutoStrategyDevices []string      `json:"devices,omitempty"`
+}
+
+// const a = {"numberOfShards": 2}, "devices": ["Google Pixel 3-9.0"]
+// Input for package strategy:
+// {"numberOfShards": 2, "mapping": [{"name": "Shard 1", "strategy": "package", "values": ["com.foo.login", "com.foo.logout"]}, {"name": "Shard 2", "strategy": "package", "values": ["com.foo.dashboard"]}]}
+// Input for class strategy:
+// {"numberOfShards": 2, "mapping": [{"name": "Shard 1", "strategy": "class", "values": ["com.foo.login.user", "com.foo.login.admin"]}, {"name": "Shard 2", "strategy": "class", "values": ["com.foo.logout.user"]}]}
 
 type BrowserStackPayload struct {
 	App                    string      `json:"app"`
@@ -24,13 +43,71 @@ type BrowserStackPayload struct {
 	UseLocal               bool        `json:"useLocal,omitempty"`
 	ClearAppData           bool        `json:"clearPackageData,omitempty"`
 	SingleRunnerInvocation bool        `json:"singleRunnerInvocation,omitempty"`
-	Class                  interface{} `json:"class,omitempty"`
+	Class                  []string    `json:"class,omitempty"`
 	Package                []string    `json:"package,omitempty"`
 	Annotation             []string    `json:"annotation,omitempty"`
 	Size                   []string    `json:"size,omitempty"`
 	UseMockServer          bool        `json:"allowDeviceMockServer,omitempty"`
-	// UseTestSharding        interface{} `json:"shards,omitempty"`
+	UseTestSharding        interface{} `json:"shards,omitempty"`
 	// Filter_tests           interface{} `json:"shards,omitempty"`
+}
+
+func getDevices() []string {
+	var devices []string
+
+	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("devices_list")))
+	for scanner.Scan() {
+		device := scanner.Text()
+		device = strings.TrimSpace(device)
+
+		if device == "" {
+			continue
+		}
+
+		devices = append(devices, device)
+
+	}
+	return devices
+}
+
+func getTestFilters(payload BrowserStackPayload) ([]string, []string, []string, []string) {
+	var test_class []string
+	var test_package []string
+	var test_annotation []string
+	var test_size []string
+
+	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("filter_test")))
+	for scanner.Scan() {
+		test_sharding := scanner.Text()
+
+		test_sharding = strings.TrimSpace(test_sharding)
+
+		if test_sharding == "" {
+			continue
+		}
+
+		test_values := strings.Split(test_sharding, ",")
+
+		for i := 0; i < len(test_values); i++ {
+
+			// log.Print(test_values[i], i)
+			test_value := strings.Split(test_values[i], " ")
+			switch test_value[0] {
+			case "class":
+				log.Print("class ", test_value[1], " ", test_class)
+				test_class = append(test_class, test_value[1])
+			case "package":
+				test_package = append(test_package, test_value[1])
+			case "annotation":
+				test_annotation = append(test_annotation, test_value[1])
+			case "size":
+				test_size = append(test_size, test_value[1])
+			}
+		}
+
+	}
+
+	return test_class, test_package, test_annotation, test_size
 }
 
 func createBuildPayload() BrowserStackPayload {
@@ -43,12 +120,16 @@ func createBuildPayload() BrowserStackPayload {
 	clear_app_data, _ := strconv.ParseBool(os.Getenv("clear_app_data"))
 	use_single_runner_invocation, _ := strconv.ParseBool(os.Getenv("use_single_runner_invocation"))
 	use_mock_server, _ := strconv.ParseBool(os.Getenv("use_mock_server"))
-	test_filters := os.Getenv("filter_test")
 
-	// log.Print(strings.Split(os.Getenv("devices_list"), ","))
+	sharding_data := TestSharding{}
+	log.Print("use_test_sharding", os.Getenv("use_test_sharding"))
+	err := json.Unmarshal([]byte(os.Getenv("use_test_sharding")), &sharding_data)
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	payload := BrowserStackPayload{
-		// Devices:                []string{os.Getenv("devices_list")},
 		InstrumentationLogs:    instrumentation_logs,
 		NetworkLogs:            network_logs,
 		DeviceLogs:             device_logs,
@@ -60,29 +141,33 @@ func createBuildPayload() BrowserStackPayload {
 		UseLocal:               use_local,
 		ClearAppData:           clear_app_data,
 		UseMockServer:          use_mock_server,
-		// Class:                  []string{os.Getenv("filter_test")},
-		// Package:                []string{os.Getenv("filter_test")},
-		// Annotation:             []string{os.Getenv("filter_test")},
-		// Size:                   []string{os.Getenv("filter_test")},
 	}
 
-	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("devices_list")))
-	for scanner.Scan() {
-		device := scanner.Text()
-		device = strings.TrimSpace(device)
+	test_class, test_package, test_annotation, test_size := getTestFilters(payload)
 
-		if device == "" {
-			continue
-		}
-
-		payload.Devices = append(payload.Devices, device)
-
+	if len(test_class) != 0 {
+		payload.Class = test_class
 	}
 
-	if test_filters != "" {
-		payload.Class = []string{test_filters}
-		payload.Package = []string{test_filters}
+	if len(test_package) != 0 {
+		payload.Package = test_package
 	}
+
+	if len(test_annotation) != 0 {
+		payload.Annotation = test_annotation
+	}
+
+	if len(test_size) != 0 {
+		payload.Size = test_size
+	}
+
+	log.Print(sharding_data)
+
+	if len(sharding_data.Mapping) != 0 && sharding_data.NumberOfShards != 0 {
+		payload.UseTestSharding = sharding_data
+	}
+
+	payload.Devices = getDevices()
 
 	return payload
 }

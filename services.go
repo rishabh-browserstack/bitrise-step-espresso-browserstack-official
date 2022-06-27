@@ -23,9 +23,10 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	payload_values.App = app_url
 	payload_values.TestSuite = test_suite_url
 
-	log.Print(payload_values)
-
 	payload, err := json.Marshal(payload_values)
+	log.Print(string(payload))
+
+	// os.Exit(1)
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", BROWSERSTACK_DOMAIN+APP_AUTOMATE_BUILD_ENDPOINT, bytes.NewBuffer(payload))
