@@ -23,6 +23,17 @@ type TestSharding struct {
 	AutoStrategyDevices []string      `json:"devices,omitempty"`
 }
 
+type TestCases struct {
+	Count  int                    `json:"count,omitempty"`
+	Status map[string]interface{} `json:"status,omitempty"`
+}
+
+type Sessions struct {
+	Id        string `json:"id"`
+	Status    string `json:"status"`
+	TestCases string `json:"start_time"`
+}
+
 // const a = {"numberOfShards": 2}, "devices": ["Google Pixel 3-9.0"]
 // Input for package strategy:
 // {"numberOfShards": 2, "mapping": [{"name": "Shard 1", "strategy": "package", "values": ["com.foo.login", "com.foo.logout"]}, {"name": "Shard 2", "strategy": "package", "values": ["com.foo.dashboard"]}]}
@@ -49,7 +60,6 @@ type BrowserStackPayload struct {
 	Size                   []string    `json:"size,omitempty"`
 	UseMockServer          bool        `json:"allowDeviceMockServer,omitempty"`
 	UseTestSharding        interface{} `json:"shards,omitempty"`
-	// Filter_tests           interface{} `json:"shards,omitempty"`
 }
 
 func getDevices() []string {
@@ -90,11 +100,9 @@ func getTestFilters(payload BrowserStackPayload) ([]string, []string, []string, 
 
 		for i := 0; i < len(test_values); i++ {
 
-			// log.Print(test_values[i], i)
 			test_value := strings.Split(test_values[i], " ")
 			switch test_value[0] {
 			case "class":
-				log.Print("class ", test_value[1], " ", test_class)
 				test_class = append(test_class, test_value[1])
 			case "package":
 				test_package = append(test_package, test_value[1])
@@ -122,11 +130,12 @@ func createBuildPayload() BrowserStackPayload {
 	use_mock_server, _ := strconv.ParseBool(os.Getenv("use_mock_server"))
 
 	sharding_data := TestSharding{}
-	log.Print("use_test_sharding", os.Getenv("use_test_sharding"))
-	err := json.Unmarshal([]byte(os.Getenv("use_test_sharding")), &sharding_data)
+	if os.Getenv("use_test_sharding") != "" {
+		err := json.Unmarshal([]byte(os.Getenv("use_test_sharding")), &sharding_data)
 
-	if err != nil {
-		fmt.Println(err.Error())
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 
 	payload := BrowserStackPayload{
@@ -160,8 +169,6 @@ func createBuildPayload() BrowserStackPayload {
 	if len(test_size) != 0 {
 		payload.Size = test_size
 	}
-
-	log.Print(sharding_data)
 
 	if len(sharding_data.Mapping) != 0 && sharding_data.NumberOfShards != 0 {
 		payload.UseTestSharding = sharding_data
@@ -226,4 +233,61 @@ func jsonParse(base64String string) map[string]interface{} {
 	}
 
 	return parsed_json
+}
+
+func printBuildStatus(build_details map[string]interface{}) {
+
+	log.Print("Build finished")
+	log.Print("Test results summary:")
+
+	devices := build_details["devices"].([]interface{})
+	build_id := build_details["id"]
+
+	if len(devices) == 1 {
+		sessions := devices[0].(map[string]interface{})["sessions"].([]interface{})[0].(map[string]interface{})
+
+		session_status := sessions["status"].(string)
+		session_test_cases := sessions["testcases"].(map[string]interface{})
+		session_test_status := session_test_cases["status"].(map[string]interface{})
+
+		total_test := session_test_cases["count"]
+		passed_test := session_test_status["passed"]
+		device_name := devices[0].(map[string]interface{})["device"].(string)
+
+		log.Print("Build Id                                            Devices                                            Status")
+		log.Println("")
+		if session_status == "passed" {
+			log.Printf("%s                                            %s                                            PASSED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+
+		}
+
+		if session_status == "failed" {
+			log.Printf("%s                                            %s                                            FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+		}
+
+	} else {
+		for i := 0; i < len(devices); i++ {
+			sessions := devices[i].(map[string]interface{})["sessions"].([]interface{})[0].(map[string]interface{})
+
+			session_status := sessions["status"].(string)
+			session_test_cases := sessions["testcases"].(map[string]interface{})
+			session_test_status := session_test_cases["status"].(map[string]interface{})
+
+			total_test := session_test_cases["count"]
+			passed_test := session_test_status["passed"]
+			device_name := devices[i].(map[string]interface{})["device"].(string)
+
+			// log.Print("Payload -> ", session_status, session_test_cases, total_test, session_status)
+
+			log.Print("Build Id                                            Devices                                            Status")
+			if session_status == "passed" {
+				log.Printf("%s                %s                PASSED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+
+			}
+
+			if session_status == "failed" {
+				log.Printf("%s                %s                FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+			}
+		}
+	}
 }

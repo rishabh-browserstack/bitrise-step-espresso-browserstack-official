@@ -24,9 +24,7 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	payload_values.TestSuite = test_suite_url
 
 	payload, err := json.Marshal(payload_values)
-	log.Print(string(payload))
-
-	// os.Exit(1)
+	log.Print("Payload -> ", string(payload))
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", BROWSERSTACK_DOMAIN+APP_AUTOMATE_BUILD_ENDPOINT, bytes.NewBuffer(payload))
@@ -56,6 +54,7 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	return string(body), nil
 }
 
+// this function uploads both app and test suite
 func upload(app_path string, endpoint string, username string, access_key string) (string, error) {
 	if app_path == "" {
 		return "", errors.New(FILE_NOT_AVAILABLE_ERROR)
@@ -111,16 +110,16 @@ func upload(app_path string, endpoint string, username string, access_key string
 func checkBuildStatus(build_id string, username string, access_key string) (string, error) {
 
 	build_status := ""
+	var body []byte
+	build_parsed_response := make(map[string]interface{})
 	var err error
 
 	clear := setInterval(func() {
-		log.Print("Inside interval function")
-		log.Printf("Checking build status for build_id %s", build_id)
 
 		client := &http.Client{}
 		req, _ := http.NewRequest("GET", BROWSERSTACK_DOMAIN+APP_AUTOMATE_BUILD_STATUS_ENDPOINT+build_id, nil)
 
-		log.Print(BROWSERSTACK_DOMAIN + APP_AUTOMATE_BUILD_STATUS_ENDPOINT + build_id)
+		// log.Print(BROWSERSTACK_DOMAIN + APP_AUTOMATE_BUILD_STATUS_ENDPOINT + build_id)
 
 		req.SetBasicAuth(username, access_key)
 
@@ -133,26 +132,26 @@ func checkBuildStatus(build_id string, username string, access_key string) (stri
 
 		defer res.Body.Close()
 
-		body, err := ioutil.ReadAll(res.Body)
+		body, err = ioutil.ReadAll(res.Body)
 
 		if err != nil {
 			err = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, err))
 		}
 
-		build_parsed_response := make(map[string]interface{})
-
 		json.Unmarshal([]byte(body), &build_parsed_response)
 
 		build_status = build_parsed_response["status"].(string)
 
-		log.Printf("build_status %s", build_status)
 	}, POOLING_INTERVAL_IN_MS, false)
 
 	for {
 		if build_status != "running" && build_status != "" {
 			// Stop the ticket, ending the interval go routine
 			clear <- true
+			printBuildStatus(build_parsed_response)
+
 			return build_status, err
 		}
 	}
+
 }

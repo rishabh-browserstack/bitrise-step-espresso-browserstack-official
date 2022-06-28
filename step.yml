@@ -104,12 +104,21 @@ inputs:
   - devices_list: 
     opts:
       title: "Devices"
-      # value_options: 
-      #   - "Galaxy s20-11.0"
-      summary: "List of devices to run the tests: one or more devices comma separated"
+      summary: |
+        Name of one or more device-OS combination in new line from the [device list](https://www.browserstack.com/list-of-browsers-and-platforms/app_automate) . For example:
+        
+        `Samsung Galaxy S9 Plus-9.0`
+        
+        `Google Pixel 3a-9.0`
+      description: |
+        Name of one or more device-OS combination in new line 
+        For example:
+        
+        `Samsung Galaxy S9 Plus-9.0`
+        
+        `Google Pixel 3a-9.0`
       is_expand: true
       is_required: true
-      description: "Name of one or more device-OS combination separated by comma. For example, `\"Samsung Galaxy S9 Plus-9.0\"`, `\"Google Pixel 3a-9.0\"`"
       category: "Devices"
       
   # Debug logs inputs
@@ -208,11 +217,11 @@ inputs:
         package com.android.foo
         For annotation filtering strategy:
         size small,size medium,size large"
-      description: |-
+      description: |
         Provide key-value pairs of filters to run tests: class, package, annotation, size
         For example, class com.foo.AddToCartClass,class com.foo.CheckoutClass
         package com.foo
-        Learn more.
+        Learn more.(https://www.browserstack.com/docs/app-automate/espresso/select-test-cases)
       category: "Test Configuration"
   - use_single_runner_invocation: false
     opts:
@@ -232,10 +241,11 @@ inputs:
         - true
         - false
       category: "Test Configuration"
-  - check_build_status: false
+  - check_build_status: true
     opts:
-      title: "Check build status"
-      summary: "This will wait for your build to get completed"
+      title: "Build Status"
+      description: "Wait for build results"
+      summary: "Wait for BrowserStack to complete the execution and get the test results"
       value_options: 
         - true
         - false
@@ -244,17 +254,33 @@ inputs:
   - api_params:
     opts:
       title: "Test capabilities"
-      description: Comma-separated key-value pairs of capabilities provided by BrowserStack.
-      summary: "Comma-separated key-value pairs of capabilities provided by BrowserStack. For example: `coverage=true`, `geoLocation=\"CN\"` Learn about more capabilities."
-      # category: "Test Configuration"
+      summary: New line key-value pairs of capabilities provided by BrowserStack.
+      description: |
+        New line key-value pairs of capabilities provided by BrowserStack.
+        
+        For example:
+        coverage=true
+        
+        geoLocation=CN
+        
+        [Learn about more capabilities.](https://www.browserstack.com/docs/app-automate/api-reference/espresso/builds#execute-a-build)
+      category: "Test Configuration"
 
       
 
 outputs:
-  - EXAMPLE_STEP_OUTPUT:
+  - BUILD_ID:
+    opts:
+      title: "Build Id"
+      summary: Bs build id
+      description: |
+        Description of this output.
+
+        Can be Markdown formatted text.
+  - BUILD_STATUS:
     opts:
       title: "Build Status"
-      summary: Summary. No more than 2-3 sentences.
+      summary: Bs build status
       description: |
         Description of this output.
 
