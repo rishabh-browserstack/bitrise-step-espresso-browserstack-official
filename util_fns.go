@@ -12,73 +12,6 @@ import (
 	"time"
 )
 
-type TestMapping struct {
-	Name     string   `json:"name,omitempty"`
-	Strategy string   `json:"strategy,omitempty"`
-	Values   []string `json:"values,omitempty"`
-}
-
-type TestSharding struct {
-	NumberOfShards      int           `json:"numberOfShards,omitempty"`
-	Mapping             []TestMapping `json:"mapping,omitempty"`
-	AutoStrategyDevices []string      `json:"devices,omitempty"`
-}
-
-type TestCases struct {
-	Count  int                    `json:"count,omitempty"`
-	Status map[string]interface{} `json:"status,omitempty"`
-}
-
-type Sessions struct {
-	Id        string `json:"id"`
-	Status    string `json:"status"`
-	TestCases string `json:"start_time"`
-}
-
-// const a = {"numberOfShards": 2}, "devices": ["Google Pixel 3-9.0"]
-// Input for package strategy:
-// {"numberOfShards": 2, "mapping": [{"name": "Shard 1", "strategy": "package", "values": ["com.foo.login", "com.foo.logout"]}, {"name": "Shard 2", "strategy": "package", "values": ["com.foo.dashboard"]}]}
-// Input for class strategy:
-// {"numberOfShards": 2, "mapping": [{"name": "Shard 1", "strategy": "class", "values": ["com.foo.login.user", "com.foo.login.admin"]}, {"name": "Shard 2", "strategy": "class", "values": ["com.foo.logout.user"]}]}
-
-type BrowserStackPayload struct {
-	App                    string      `json:"app"`
-	TestSuite              string      `json:"testSuite"`
-	Devices                []string    `json:"devices"`
-	InstrumentationLogs    bool        `json:"instrumentationLogs"`
-	NetworkLogs            bool        `json:"networkLogs"`
-	DeviceLogs             bool        `json:"deviceLogs"`
-	DebugScreenshots       bool        `json:"debugscreenshots,omitempty"`
-	VideoRecording         bool        `json:"video"`
-	Project                string      `json:"project,omitempty"`
-	ProjectNotifyURL       string      `json:"projectNotifyURL,omitempty"`
-	UseLocal               bool        `json:"local,omitempty"`
-	ClearAppData           bool        `json:"clearPackageData,omitempty"`
-	SingleRunnerInvocation bool        `json:"singleRunnerInvocation,omitempty"`
-	Class                  []string    `json:"class,omitempty"`
-	Package                []string    `json:"package,omitempty"`
-	Annotation             []string    `json:"annotation,omitempty"`
-	Size                   []string    `json:"size,omitempty"`
-	UseMockServer          bool        `json:"allowDeviceMockServer,omitempty"`
-	UseTestSharding        interface{} `json:"shards,omitempty"`
-
-	// non ui fields
-	// EnableSpoonFramework  bool     `json:"enableSpoonFramework,omitempty"`
-	// GpsLocation           string   `json:"gpsLocation,omitempty"`
-	// GeoLocation           string   `json:"geoLocation,omitempty"`
-	// CallbackURL           string   `json:"callbackURL,omitempty"`
-	// NetworkProfile        string   `json:"networkProfile,omitempty"`
-	// CustomNetwork         string   `json:"customNetwork,omitempty"`
-	// Language              string   `json:"language,omitempty"`
-	// Locale                string   `json:"locale,omitempty"`
-	// AppStoreConfiguration string   `json:"appStoreConfiguration,omitempty"`
-	// DeviceOrientation     string   `json:"deviceOrientation,omitempty"`
-	// AcceptInsecureCerts   bool     `json:"acceptInsecureCerts,omitempty"`
-	// UploadMedia           []string `json:"UploadMedia,omitempty"`
-	// LocalIdentifier       string   `json:"localIdentifier,omitempty"`
-	// IdleTimeout           string   `json:"idleTimeout,omitempty"`
-}
-
 func getDevices() ([]string, error) {
 	var devices []string
 
@@ -104,6 +37,7 @@ func getDevices() ([]string, error) {
 	return devices, nil
 }
 
+// any other capability which we're not taking from pre-defined inputs can be passed in api_params
 func appendExtraCapabilities(payload string) []byte {
 
 	out := map[string]interface{}{}
@@ -166,6 +100,7 @@ func getTestFilters(payload *BrowserStackPayload) {
 
 }
 
+// this util only picks data from env and map it to the struct
 func createBuildPayload() BrowserStackPayload {
 	instrumentation_logs, _ := strconv.ParseBool(os.Getenv("instrumentation_logs"))
 	network_logs, _ := strconv.ParseBool(os.Getenv("network_logs"))
@@ -216,6 +151,8 @@ func failf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
+// this works as a goroutine which will run in background
+// on a different thread without effecting any other code
 func setInterval(someFunc func(), milliseconds int, async bool) chan bool {
 
 	// How often to fire the passed in function
@@ -267,6 +204,7 @@ func jsonParse(base64String string) map[string]interface{} {
 	return parsed_json
 }
 
+// this function only print data to the console.
 func printBuildStatus(build_details map[string]interface{}) {
 
 	log.Println("Build finished")
@@ -274,10 +212,9 @@ func printBuildStatus(build_details map[string]interface{}) {
 
 	devices := build_details["devices"].([]interface{})
 	build_id := build_details["id"]
-	log.Print("len", len(devices))
 
 	if len(devices) == 1 {
-		log.Print("heree")
+
 		sessions := devices[0].(map[string]interface{})["sessions"].([]interface{})[0].(map[string]interface{})
 
 		session_status := sessions["status"].(string)
@@ -290,13 +227,14 @@ func printBuildStatus(build_details map[string]interface{}) {
 
 		log.Print("Build Id                                            Devices                                            Status")
 		log.Println("")
+
 		if session_status == "passed" {
-			log.Printf("%s                                            %s                                            PASSED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+			log.Printf("%s                %s                PASSED (%v/%v passed)", build_id, device_name, passed_test, total_test)
 
 		}
 
 		if session_status == "failed" || session_status == "error" {
-			log.Printf("%s                                            %s                                            FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
+			log.Printf("%s                %s                FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
 		}
 
 	} else {
@@ -310,8 +248,6 @@ func printBuildStatus(build_details map[string]interface{}) {
 			total_test := session_test_cases["count"]
 			passed_test := session_test_status["passed"]
 			device_name := devices[i].(map[string]interface{})["device"].(string)
-
-			// log.Print("Payload -> ", session_status, session_test_cases, total_test, session_status)
 
 			log.Print("Build Id                                            Devices                                            Status")
 			if session_status == "passed" {
