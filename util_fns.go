@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -51,7 +52,7 @@ type BrowserStackPayload struct {
 	VideoRecording         bool        `json:"video"`
 	Project                string      `json:"project,omitempty"`
 	ProjectNotifyURL       string      `json:"projectNotifyURL,omitempty"`
-	UseLocal               bool        `json:"useLocal,omitempty"`
+	UseLocal               bool        `json:"local,omitempty"`
 	ClearAppData           bool        `json:"clearPackageData,omitempty"`
 	SingleRunnerInvocation bool        `json:"singleRunnerInvocation,omitempty"`
 	Class                  []string    `json:"class,omitempty"`
@@ -60,12 +61,35 @@ type BrowserStackPayload struct {
 	Size                   []string    `json:"size,omitempty"`
 	UseMockServer          bool        `json:"allowDeviceMockServer,omitempty"`
 	UseTestSharding        interface{} `json:"shards,omitempty"`
+
+	// non ui fields
+	// EnableSpoonFramework  bool     `json:"enableSpoonFramework,omitempty"`
+	// GpsLocation           string   `json:"gpsLocation,omitempty"`
+	// GeoLocation           string   `json:"geoLocation,omitempty"`
+	// CallbackURL           string   `json:"callbackURL,omitempty"`
+	// NetworkProfile        string   `json:"networkProfile,omitempty"`
+	// CustomNetwork         string   `json:"customNetwork,omitempty"`
+	// Language              string   `json:"language,omitempty"`
+	// Locale                string   `json:"locale,omitempty"`
+	// AppStoreConfiguration string   `json:"appStoreConfiguration,omitempty"`
+	// DeviceOrientation     string   `json:"deviceOrientation,omitempty"`
+	// AcceptInsecureCerts   bool     `json:"acceptInsecureCerts,omitempty"`
+	// UploadMedia           []string `json:"UploadMedia,omitempty"`
+	// LocalIdentifier       string   `json:"localIdentifier,omitempty"`
+	// IdleTimeout           string   `json:"idleTimeout,omitempty"`
 }
 
-func getDevices() []string {
+func getDevices() ([]string, error) {
 	var devices []string
 
-	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("devices_list")))
+	devices_input := os.Getenv("devices_list")
+
+	if devices_input == "" {
+		return devices, errors.New(fmt.Sprintf(BUILD_FAILED_ERROR, "invalid device format"))
+	}
+	log.Print(devices_input)
+	scanner := bufio.NewScanner(strings.NewReader(devices_input))
+
 	for scanner.Scan() {
 		device := scanner.Text()
 		device = strings.TrimSpace(device)
@@ -77,14 +101,39 @@ func getDevices() []string {
 		devices = append(devices, device)
 
 	}
-	return devices
+	return devices, nil
 }
 
-func getTestFilters(payload BrowserStackPayload) ([]string, []string, []string, []string) {
-	var test_class []string
-	var test_package []string
-	var test_annotation []string
-	var test_size []string
+func appendExtraCapabilities(payload string) []byte {
+
+	out := map[string]interface{}{}
+
+	json.Unmarshal([]byte(payload), &out)
+
+	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("api_params")))
+	for scanner.Scan() {
+		test_sharding := scanner.Text()
+
+		test_sharding = strings.TrimSpace(test_sharding)
+
+		if test_sharding == "" {
+			continue
+		}
+
+		test_values := strings.Split(test_sharding, "=")
+
+		key := test_values[0]
+
+		out[key] = test_values[1]
+
+	}
+
+	outputJSON, _ := json.Marshal(out)
+	return outputJSON
+
+}
+
+func getTestFilters(payload *BrowserStackPayload) {
 
 	scanner := bufio.NewScanner(strings.NewReader(os.Getenv("filter_test")))
 	for scanner.Scan() {
@@ -103,19 +152,19 @@ func getTestFilters(payload BrowserStackPayload) ([]string, []string, []string, 
 			test_value := strings.Split(test_values[i], " ")
 			switch test_value[0] {
 			case "class":
-				test_class = append(test_class, test_value[1])
+				*&payload.Class = append(*&payload.Class, test_value[1])
 			case "package":
-				test_package = append(test_package, test_value[1])
+				*&payload.Package = append(*&payload.Package, test_value[1])
 			case "annotation":
-				test_annotation = append(test_annotation, test_value[1])
+				*&payload.Annotation = append(*&payload.Annotation, test_value[1])
 			case "size":
-				test_size = append(test_size, test_value[1])
+				log.Printf(test_value[1])
+				*&payload.Size = append(*&payload.Size, test_value[1])
 			}
 		}
 
 	}
 
-	return test_class, test_package, test_annotation, test_size
 }
 
 func createBuildPayload() BrowserStackPayload {
@@ -152,29 +201,13 @@ func createBuildPayload() BrowserStackPayload {
 		UseMockServer:          use_mock_server,
 	}
 
-	test_class, test_package, test_annotation, test_size := getTestFilters(payload)
-
-	if len(test_class) != 0 {
-		payload.Class = test_class
-	}
-
-	if len(test_package) != 0 {
-		payload.Package = test_package
-	}
-
-	if len(test_annotation) != 0 {
-		payload.Annotation = test_annotation
-	}
-
-	if len(test_size) != 0 {
-		payload.Size = test_size
-	}
+	getTestFilters(&payload)
 
 	if len(sharding_data.Mapping) != 0 && sharding_data.NumberOfShards != 0 {
 		payload.UseTestSharding = sharding_data
 	}
 
-	payload.Devices = getDevices()
+	payload.Devices, _ = getDevices()
 
 	return payload
 }
@@ -237,8 +270,8 @@ func jsonParse(base64String string) map[string]interface{} {
 
 func printBuildStatus(build_details map[string]interface{}) {
 
-	log.Print("Build finished")
-	log.Print("Test results summary:")
+	log.Println("Build finished")
+	log.Println("Test results summary:")
 
 	devices := build_details["devices"].([]interface{})
 	build_id := build_details["id"]

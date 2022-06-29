@@ -26,6 +26,10 @@ func build(app_url string, test_suite_url string, username string, access_key st
 	payload, err := json.Marshal(payload_values)
 	log.Print("Payload -> ", string(payload))
 
+	final_payload := appendExtraCapabilities(string(payload))
+
+	log.Print("Final payload -> ", string(final_payload))
+
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", BROWSERSTACK_DOMAIN+APP_AUTOMATE_BUILD_ENDPOINT, bytes.NewBuffer(payload))
 
@@ -109,17 +113,19 @@ func upload(app_path string, endpoint string, username string, access_key string
 
 func checkBuildStatus(build_id string, username string, access_key string) (string, error) {
 
+	if build_id == "" {
+		return "", errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, "invalid build_id"))
+	}
+
+	build_parsed_response := make(map[string]interface{})
 	build_status := ""
 	var body []byte
-	build_parsed_response := make(map[string]interface{})
-	var err error
+	var build_status_error error
 
 	clear := setInterval(func() {
 
 		client := &http.Client{}
 		req, _ := http.NewRequest("GET", BROWSERSTACK_DOMAIN+APP_AUTOMATE_BUILD_STATUS_ENDPOINT+build_id, nil)
-
-		// log.Print(BROWSERSTACK_DOMAIN + APP_AUTOMATE_BUILD_STATUS_ENDPOINT + build_id)
 
 		req.SetBasicAuth(username, access_key)
 
@@ -127,7 +133,8 @@ func checkBuildStatus(build_id string, username string, access_key string) (stri
 		res, err := client.Do(req)
 
 		if err != nil {
-			err = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, err))
+			build_status_error = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, err))
+			return
 		}
 
 		defer res.Body.Close()
@@ -135,10 +142,16 @@ func checkBuildStatus(build_id string, username string, access_key string) (stri
 		body, err = ioutil.ReadAll(res.Body)
 
 		if err != nil {
-			err = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, err))
+			build_status_error = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, err))
+			return
 		}
 
 		json.Unmarshal([]byte(body), &build_parsed_response)
+
+		if build_parsed_response["error"] != nil && build_parsed_response["error"] != "" {
+			build_status_error = errors.New(fmt.Sprintf(FETCH_BUILD_STATUS_ERROR, build_parsed_response["error"]))
+			return
+		}
 
 		build_status = build_parsed_response["status"].(string)
 
@@ -150,7 +163,14 @@ func checkBuildStatus(build_id string, username string, access_key string) (stri
 			clear <- true
 			printBuildStatus(build_parsed_response)
 
-			return build_status, err
+			return build_status, build_status_error
+		}
+
+		if build_status_error != nil {
+
+			clear <- true
+
+			return build_status, build_status_error
 		}
 	}
 

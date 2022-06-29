@@ -55,3 +55,47 @@ func TestUpload(t *testing.T) {
 	}
 
 }
+
+func TestCheckBuildStatus(t *testing.T) {
+	t.Log("It should throw if build_id is not passed")
+	{
+
+		build, err := checkBuildStatus("", "username", "password")
+		t.Log(build, err)
+		require.Equal(t, "", build)
+		require.Error(t, err)
+	}
+	t.Log("It should throw unauthorized error while checking build status")
+	{
+		expected := map[string]interface{}{"message": "unautorized"}
+		build, err := checkBuildStatus(SAMPLE_BUILD_ID, "username", "password")
+
+		require.Equal(t, "", build)
+
+		require.Error(t, err, expected)
+	}
+}
+
+func TestGetDevices(t *testing.T) {
+	t.Log("It should return devices list")
+	{
+
+		expected := []string{"Samsung Galaxy S9 Plus-9.0", "Samsung Galaxy S10 Plus-10.0"}
+		t.Setenv("devices_list", "Samsung Galaxy S9 Plus-9.0\nSamsung Galaxy S10 Plus-10.0")
+
+		devices, _ := getDevices()
+
+		require.Equal(t, expected, devices)
+
+	}
+	t.Log("It should throw error if devices not found in env")
+	{
+		t.Setenv("devices_list", "")
+		_, err := getDevices()
+
+		t.Log(err)
+		require.Error(t, err)
+
+	}
+
+}

@@ -10,6 +10,7 @@ const (
 
 	SAMPLE_APP        = "bs://b91841adbf33515fef7a1cca869a9526a86f9a0e"
 	SAMPLE_TEST_SUITE = "bs://535a0932c8a785384b8470ec6166e093cd3b2c5f"
+	SAMPLE_BUILD_ID   = "56fec97937b22c785a6c5e08c13f629d505f5cd9"
 
 	UPLOAD_APP_ERROR         = "Failed to upload app on BrowserStack, error : %s"
 	FILE_NOT_AVAILABLE_ERROR = "Failed to upload test suite on BrowserStack, error: file not available"
