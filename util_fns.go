@@ -87,7 +87,7 @@ func getDevices() ([]string, error) {
 	if devices_input == "" {
 		return devices, errors.New(fmt.Sprintf(BUILD_FAILED_ERROR, "invalid device format"))
 	}
-	log.Print(devices_input)
+
 	scanner := bufio.NewScanner(strings.NewReader(devices_input))
 
 	for scanner.Scan() {
@@ -158,7 +158,6 @@ func getTestFilters(payload *BrowserStackPayload) {
 			case "annotation":
 				*&payload.Annotation = append(*&payload.Annotation, test_value[1])
 			case "size":
-				log.Printf(test_value[1])
 				*&payload.Size = append(*&payload.Size, test_value[1])
 			}
 		}
@@ -275,8 +274,10 @@ func printBuildStatus(build_details map[string]interface{}) {
 
 	devices := build_details["devices"].([]interface{})
 	build_id := build_details["id"]
+	log.Print("len", len(devices))
 
 	if len(devices) == 1 {
+		log.Print("heree")
 		sessions := devices[0].(map[string]interface{})["sessions"].([]interface{})[0].(map[string]interface{})
 
 		session_status := sessions["status"].(string)
@@ -294,7 +295,7 @@ func printBuildStatus(build_details map[string]interface{}) {
 
 		}
 
-		if session_status == "failed" {
+		if session_status == "failed" || session_status == "error" {
 			log.Printf("%s                                            %s                                            FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
 		}
 
@@ -318,7 +319,7 @@ func printBuildStatus(build_details map[string]interface{}) {
 
 			}
 
-			if session_status == "failed" {
+			if session_status == "failed" || session_status == "error" {
 				log.Printf("%s                %s                FAILED (%v/%v passed)", build_id, device_name, passed_test, total_test)
 			}
 		}

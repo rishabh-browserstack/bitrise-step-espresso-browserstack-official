@@ -155,7 +155,7 @@ func checkBuildStatus(build_id string, username string, access_key string) (stri
 
 		build_status = build_parsed_response["status"].(string)
 
-	}, POOLING_INTERVAL_IN_MS, false)
+	}, 10, false)
 
 	for {
 		if build_status != "running" && build_status != "" {
